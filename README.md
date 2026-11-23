@@ -1,23 +1,23 @@
 # Reto Técnico 02 — Agente Conversacional "Registro de Contratos Vigentes"
 
-Solución completa e independiente para automatizar la recepción, extracción, validación, archivo y alerta de contratos vigentes desde un buzón único, desarrollada en **TypeScript** sobre **Bun**.
+Solución completa e independiente para automatizar la recepción, extracción, validación, archivo y alerta de contratos vigentes desde un buzón único, desarrollada en **TypeScript** sobre **Bun** y desplegada en **Docker** con soporte para **Ollama** local (o cualquier endpoint compatible con la API de OpenAI)[cite: 6, 7].
 
 ## Enlace de prueba
 
-- **URL pública:** `https://<tu-despliegue-o-tunel>` *(reemplazar antes de la entrega; si se prueba en local durante la defensa, indicar `http://localhost:3000`)*
-- **Autenticación:** Pública (sin credenciales requeridas).
+- **URL local / defensa:** `http://localhost:3000` *(o `https://<tu-despliegue-o-tunel>` si se expone públicamente)*[cite: 6]
+- **Autenticación:** Pública (sin credenciales requeridas)[cite: 6].
 
 ---
 
 ## Requisitos previos
 
-- **Bun** (`v1.1+`) instalado en el equipo.
-- Una clave de API de un proveedor LLM compatible con OpenAI (o instancia local como Ollama) únicamente para usar el chat interactivo. `demo.ts` **no** requiere clave ni conexión a LLM.
+- **Docker** y **Docker Compose** (o **Bun** `v1.1+` en local)[cite: 6].
+- **Ollama** corriendo en el host con el modelo configurado (ej. `qwen2.5:14b`) únicamente para usar el chat interactivo en `http://localhost:3000`. La ejecución determinista (`demo.ts`) **no** requiere LLM ni clave API[cite: 6, 7].
 
 ---
 
-## Arranque rápido en local (< 2 minutos)
+## Arranque rápido con Docker
 
-1. **Instalar dependencias:**
+1. **Verificar Ollama en el equipo host:**
    ```bash
-   bun install
+   ollama list
