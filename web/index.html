@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perxia 2.0 · Registro de Contratos Vigentes</title>
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --accent: #38bdf8; --warn: #f59e0b; --text: #f8fafc; --muted: #94a3b8; }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+    header { padding: 14px 24px; background: var(--card); border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; font-size: 1.05rem; }
+    .badge { font-size: 0.75rem; background: #0284c7; padding: 3px 8px; border-radius: 999px; }
+    #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; max-width: 960px; width: 100%; margin: 0 auto; }
+    .msg { padding: 14px 18px; border-radius: 12px; line-height: 1.5; max-width: 88%; white-space: pre-wrap; }
+    .user { background: #2563eb; align-self: flex-end; }
+    .assistant { background: var(--card); align-self: flex-start; border: 1px solid #334155; }
+    .confirm-box { border: 2px solid var(--warn); background: rgba(245, 158, 11, 0.12); padding: 10px 14px; border-radius: 8px; margin-top: 10px; color: #fcd34d; font-weight: 600; }
+    details.tool { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 0.82rem; }
+    details.tool summary { cursor: pointer; color: var(--accent); font-family: monospace; }
+    pre { overflow-x: auto; color: #cbd5e1; margin: 6px 0 0; }
+    #thinking { display: none; color: var(--muted); font-style: italic; padding: 0 24px 8px; max-width: 960px; margin: 0 auto; width: 100%; }
+    form { display: flex; gap: 10px; padding: 14px 24px; background: var(--card); border-top: 1px solid #334155; }
+    input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: var(--text); font-size: 0.95rem; }
+    button { padding: 12px 20px; border-radius: 8px; border: none; background: var(--accent); color: #0f172a; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Agente · Registro de Contratos Vigentes</h1>
+    <span class="badge" id="status">Conectando...</span>
+  </header>
+
+  <div id="chat"></div>
+  <div id="thinking">⏳ El agente está ejecutando herramientas y analizando el buzón...</div>
+
+  <form id="form">
+    <input id="input" placeholder="Ej: Procesa el buzón de contratos con fecha de hoy 2026-09-03..." autocomplete="off" />
+    <button type="submit" id="sendBtn">Enviar</button>
+  </form>
+
+  <script>
+    const sessionId = "sess-" + Math.random().toString(36).slice(2, 9);
+    const chatEl = document.getElementById("chat");
+    const thinkingEl = document.getElementById("thinking");
+    const inputEl = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+
+    fetch("/api/health").then(r => r.json()).then(d => {
+      document.getElementById("status").textContent = `${d.provider} · ${d.model}`;
+    });
+
+    function appendMessage(role, text, toolCalls = [], needsConfirmation = false) {
+      const div = document.createElement("div");
+      div.className = `msg ${role}`;
+
+      if (toolCalls.length > 0) {
+        toolCalls.forEach(tc => {
+          const det = document.createElement("details");
+          det.className = "tool";
+          det.innerHTML = `<summary>🔧 ${tc.name}(${JSON.stringify(tc.args)})</summary><pre>${JSON.stringify(tc.result, null, 2)}</pre>`;
+          div.appendChild(det);
+        });
+      }
+
+      const content = document.createElement("div");
+      content.textContent = text;
+      div.appendChild(content);
+
+      if (needsConfirmation) {
+        const warn = document.createElement("div");
+        warn.className = "confirm-box";
+        warn.textContent = "⚠️ ACCIÓN PAUSADA: Se requiere tu confirmación explícita para registrar los campos marcados en revisión.";
+        div.appendChild(warn);
+      }
+
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      appendMessage("user", text);
+      inputEl.value = "";
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
+      thinkingEl.style.display = "block";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId, message: text })
+        });
+        const data = await res.json();
+        appendMessage("assistant", data.reply, data.toolCalls || [], Boolean(data.needsConfirmation));
+      } catch (err) {
+        appendMessage("assistant", "Error de red al contactar el servidor.");
+      } finally {
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+        thinkingEl.style.display = "none";
+        inputEl.focus();
+      }
+    });
+  </script>
+</body>
+</html>
